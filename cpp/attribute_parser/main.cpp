@@ -23,9 +23,10 @@ struct Query {
 };
 
 std::string parseOpenTagName(std::string s);
-std::string parseCloseTagName(std::string s);
+bool isOpenTag (std::string);
+bool isCloseTag(std::string s);
 Attribute parseAttribute(std::string s);
-HMRL parseHMRL(std::string s);
+HMRL parseHMRLOpen(std::string s);
 Query parseQuery(std::string s);
 void runQuery(HMRL h,Query q);
 std::string popQueryTag(Query &q);
@@ -38,31 +39,49 @@ int main() {
     int n, q;
     std::cin >> n >> q;
 
+    std::string line = "";
+    std::getline(std::cin,line);
+    // auto doc = parseHMRL(line);
+    auto root = HMRL { "root" , {}, {} };
+    auto tagStack = std::vector<HMRL>{root};
+    auto current = root;
 
-    auto doc = parseHMRL("");
+    for (int i=0;i<n;i++) {
+        std::getline(std::cin,line);
+        if(isOpenTag(line)) {
+            auto subdoc = parseHMRLOpen(line);
+            current.content.push_back(subdoc);
+            current = subdoc;
+            tagStack.push_back(current);
+        } else {
+            tagStack.pop_back();
+            current = tagStack.back();
+
+        }
+        
+
+    }
 
     for (int i=0; i<q;i++) {
-        std::string line = "";
         std::getline(std::cin,line);
         auto query = parseQuery(line);
-        popQueryTag(query);
-        runQuery(doc,query);
+        runQuery(root,query);
     }
 
     return 0;
 }
 
-HMRL parseHMRL (std::string line) {
+HMRL parseHMRLOpen (std::string line) {
     //parse open tag
     auto openTag = parseOpenTagName(line);
-    line = line.substr(line.find(openTag) + 1); // continue from after open tag
+    line = line.substr(line.find(openTag) + openTag.size()); // continue from after open tag
 
     std::vector<Attribute> attributes;
     while (line != ">") { //continue until closing bracket
         line = line.substr(1); //drop the space
         
         int eqPos = line.find('=');
-        auto name = line.substr(0,eqPos);
+        auto name = line.substr(0,eqPos - 1);
         line = line.substr(eqPos+3); //skip over =,space and "
 
         int quotePos = line.find('"');
@@ -72,15 +91,15 @@ HMRL parseHMRL (std::string line) {
         attributes.push_back(Attribute {name,val});
     } 
     
-    std::string nextLine;
-    std::getline(std::cin,nextLine);
-    std::vector<HMRL> content;
-    // keep parsing new HMRL elements until closing tag was found
-    while(openTag != parseCloseTagName(nextLine)) {
-        content.push_back(parseHMRL(nextLine));
-    }
-
-    return HMRL {openTag,attributes,content};
+    // std::string nextLine;
+    // std::getline(std::cin,nextLine);
+    // std::vector<HMRL> content;
+    // // keep parsing new HMRL elements until closing tag was found
+    // while(!isCloseTag(nextLine,openTag)) {
+    //     content.push_back(parseHMRL(nextLine));
+    //     std::getline(std::cin,nextLine);
+    // }
+    return HMRL {openTag,attributes,{}};
 }
 
 std::string parseOpenTagName(std::string s) {
@@ -88,11 +107,15 @@ std::string parseOpenTagName(std::string s) {
     if (until == std::string::npos) { //No attributes, then closing tag
         until = s.find('>');
     }
-    return s.substr(1,until); // read until first space
+    return s.substr(1,until - 1); // read until first space
 }
 
-std::string parseCloseTagName(std::string s) {
-    return s.substr(2,s.find('>'));
+bool isOpenTag (std::string s) {
+    return s.find("</") == std::string::npos;
+}
+
+bool isCloseTag(std::string s) {
+    return s.find("</") != std::string::npos;
 }
 
 HMRL findHMRL(std::vector<HMRL> doc, std::string tag) {
@@ -107,15 +130,16 @@ HMRL findHMRL(std::vector<HMRL> doc, std::string tag) {
 Query parseQuery(std::string line) {
     std::vector<std::string> tags;
 
-    while (line.substr(0) != "~") {
+    while (line.substr(0,1) != "~") {
         auto until = line.find(".");
         std::string name;
         if (until == std::string::npos) { 
             until = line.find("~");
             name = line.substr(0,until);
+            line = line.substr(until);
         } else {
             name = line.substr(0,until);
-            line = line.substr(1); // drop .
+            line = line.substr(until + 1); // drop .
         }
         tags.push_back(name);
     }
@@ -135,22 +159,31 @@ std::string popQueryTag(Query &q) {
 
 
 void runQuery(HMRL doc, Query q) {
-    
+
     while (q.tags.size() != 0) {
         std::string tag = popQueryTag(q);
 
-        doc = *find_if(doc.content.begin()
-                     ,doc.content.end()
-                     ,[&tag](HMRL h) { return h.name == tag;});
+        auto docIte = find_if(doc.content.begin()
+                           ,doc.content.end()
+                           ,[&tag](HMRL h) { return h.name == tag;});
+        
+        if (docIte == doc.content.end()) {
+            std::cout << "Not Found!\n";
+            return;
+        } else {
+            doc = *docIte;
+        }
     }
-    
+
 
     auto qAttr = q.attribute;
     auto attr = find_if(doc.attributes.begin()
                         ,doc.attributes.end()
                         ,[&qAttr](Attribute a){ return a.name == qAttr;});
 
-    std::cout << (*attr).value;
+    if (attr == doc.attributes.end()) { std::cout << "Not Found!\n"; }
+    else                              { std::cout << (*attr).value << "\n"; }
+    
     return;
 
 
