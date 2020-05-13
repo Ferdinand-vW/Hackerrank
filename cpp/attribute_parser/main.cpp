@@ -41,26 +41,22 @@ int main() {
 
     std::string line = "";
     std::getline(std::cin,line);
-    // auto doc = parseHMRL(line);
-    auto root = HMRL { "root" , {}, {} };
-    auto tagStack = std::vector<HMRL>{root};
-    auto current = root;
 
+    auto docs = std::vector<HMRL>{HMRL { "root" , {}, {} }};
     for (int i=0;i<n;i++) {
         std::getline(std::cin,line);
         if(isOpenTag(line)) {
             auto subdoc = parseHMRLOpen(line);
-            current.content.push_back(subdoc);
-            current = subdoc;
-            tagStack.push_back(current);
+            docs.push_back(subdoc);
         } else {
-            tagStack.pop_back();
-            current = tagStack.back();
-
+            auto enddoc = docs.back();
+            docs.pop_back();
+            docs.back().content.push_back(enddoc);
         }
-        
-
     }
+
+    //by now docs should only contain the root document
+    auto root = docs.front();
 
     for (int i=0; i<q;i++) {
         std::getline(std::cin,line);
@@ -91,14 +87,6 @@ HMRL parseHMRLOpen (std::string line) {
         attributes.push_back(Attribute {name,val});
     } 
     
-    // std::string nextLine;
-    // std::getline(std::cin,nextLine);
-    // std::vector<HMRL> content;
-    // // keep parsing new HMRL elements until closing tag was found
-    // while(!isCloseTag(nextLine,openTag)) {
-    //     content.push_back(parseHMRL(nextLine));
-    //     std::getline(std::cin,nextLine);
-    // }
     return HMRL {openTag,attributes,{}};
 }
 
@@ -185,6 +173,4 @@ void runQuery(HMRL doc, Query q) {
     else                              { std::cout << (*attr).value << "\n"; }
     
     return;
-
-
 }
