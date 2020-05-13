@@ -40,7 +40,7 @@ public:
     }
 
     friend ostream& operator<<(ostream& os,const Complex &c) {
-        os << c.a << "+i" << c.b;
+        return os << c.a << "+i" << c.b;
     }
 };
 
