@@ -12,61 +12,42 @@ struct Workshop {
 
 struct Available_Workshops {
     int n;
-    Workshop *workshops; 
+    std::vector<Workshop> workshops; 
 };
 
 Available_Workshops* initialize(int start_time[],int duration[], int n) {
-    Workshop *workshops = new Workshop[n];
+    std::vector<Workshop> workshops;
     for (int i = 0; i < n; i ++) {
-        workshops[i] = Workshop { start_time[i], duration[i], start_time[i] + duration[i] };
+        workshops.push_back( Workshop { start_time[i], duration[i], start_time[i] + duration[i] } );
     }
  
     return new Available_Workshops { n, workshops };  
 }
 
-
 int CalculateMaxWorkshops(Available_Workshops* ptr) {
-    std::map<int,int> maxWorkShops;
     auto av_ws = ptr->workshops;
-    std::sort(av_ws,av_ws+ ptr->n,[](Workshop &w1, Workshop &w2) { return w1.start_time < w2.start_time 
-                                                                       || (w1.start_time == w2.start_time 
-                                                                       && w1.end_time <= w2.end_time); });
+    std::sort(av_ws.begin(),av_ws.end()
+            ,[](Workshop &w1, Workshop &w2) { 
+                return w1.end_time < w2.end_time; 
+                });
 
-    std::map<int,std::vector<int>> table;
-    for (int i = ptr->n - 1; i >= 0 ;i--) {
+    std::vector<Workshop> maxWs;
+    for (int i = 0; i < ptr->n; i++) {
         auto currWs = av_ws[i];
-        std::vector<std::pair<int,std::vector<int>>> validWs;
-        std::set<int> toRemoveWs;
+        maxWs.push_back(currWs);
 
-        for(auto p : table) {
-            if (currWs.end_time <= av_ws[p.first].start_time) {
-                validWs.push_back(p);
+        bool isOverlapping = true;
+        while (isOverlapping && i - 1 < ptr->n) {
+            if (currWs.end_time > av_ws[i+1].start_time) {
+                i++;
+            } else {
+                isOverlapping = false;
             }
         }
-
-        for(auto p : validWs) {
-            for (auto ws : p.second) {
-                table.erase(ws);
-            }
-        }
-
-        validWs.push_back(std::pair<int,std::vector<int>>(0,{})); // ensure vector is non-empty
-        auto maxPath = std::max_element(validWs.begin(),validWs.end(),[](std::pair<int,std::vector<int>> &p1,std::pair<int,std::vector<int>> &p2) { return p1.second.size() <= p2.second.size(); });
-        maxPath->second.push_back(i);
-
-        table.insert(std::pair<int,std::vector<int>>(i,maxPath->second));
-
     }
 
-    auto max = std::max_element(table.begin(),table.end()
-                               ,[](const std::pair<int,std::vector<int>> &p1,const std::pair<int,std::vector<int>> &p2) 
-                                    { return p1.second.size() <= p2.second.size(); }
-                                );
-    return max->second.size();
-    
-    //std::max(table.begin()->second.first,table.begin()->second.second);   
+    return maxWs.size();   
 }
-
 
 int main(int argc, char *argv[]) {
     int n; // number of workshops
