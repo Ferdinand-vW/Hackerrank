@@ -29,9 +29,9 @@ int main() {
       auto it = std::lower_bound(numbers.begin(),numbers.end(),i);
       
       if (*it == i) {
-        std::cout << "Yes " << (it - numbers.begin()) << endl;
+        std::cout << "Yes " << (it - numbers.begin() + 1) << endl;
       } else {
-        std::cout << "No " << (it - numbers.begin()) << endl;
+        std::cout << "No " << (it - numbers.begin() + 1) << endl;
       }
     q--;
     }
