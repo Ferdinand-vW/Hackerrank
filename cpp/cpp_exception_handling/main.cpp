@@ -28,7 +28,7 @@ void process_input(int n) {
       
     }
     std::cout << "returning control flow to caller" << endl;
-
+}
 
 int main() {
     int n;
